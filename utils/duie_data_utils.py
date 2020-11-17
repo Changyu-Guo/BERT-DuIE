@@ -1,9 +1,11 @@
 # -*- coding: utf - 8 -*-
 
+import re
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tokenizers import BertWordPieceTokenizer
+from utils.tokenization import FullTokenizer
 
 
 def convert_raw_data_to_json_format(file_path, save_path):
@@ -126,7 +128,7 @@ def check_train_data(file_path):
 
     print('total_invalid examples: ', total_invalid)
 
-    origin_subject_types, origin_object_types, origin_predicates = load_schemas('../common-datasets/schemas')
+    origin_subject_types, origin_object_types, origin_predicates = load_schemas('../duie-dataset/schemas')
     origin_triplets = [
         subject_type + predicate + object_type
         for (subject_type, object_type, predicate) in zip(origin_subject_types, origin_object_types, origin_predicates)
@@ -147,5 +149,80 @@ def check_train_data(file_path):
     assert origin_triplets == triplets
 
 
+def check_entity_overlap(file_path):
+    with open(file_path, mode='r', encoding='utf-8') as reader:
+        data = json.load(reader)
+    reader.close()
+
+    total_common_entity = 0
+    total_overlap_entity = 0
+
+    for paragraph in data:
+        text: str = paragraph['text']
+        spo_list = paragraph['spo_list']
+
+        position_tuples = []
+        for spo in spo_list:
+            subject = spo['subject']
+            object_ = spo['object']
+
+            subject_start = text.lower().find(subject.lower())
+            object_start = text.lower().find(object_.lower())
+
+            position_tuples.append((object_start, object_start + len(object_) - 1))
+            position_tuples.append((subject_start, subject_start + len(subject) - 1))
+
+        position_tuples = sorted(position_tuples, key=lambda x: x[0])
+        for i in range(len(position_tuples) - 1):
+            if position_tuples[i][0] == position_tuples[i + 1][0] and position_tuples[i][1] == position_tuples[i + 1][1]:
+                total_common_entity += 1
+            elif position_tuples[i][1] > position_tuples[i + 1][0]:
+                total_overlap_entity += 1
+
+    print(total_common_entity)
+    print(total_overlap_entity)
+
+
+def remove_whitespace(file_path):
+    with open(file_path, mode='r', encoding='utf-8') as reader:
+        data = json.load(reader)
+    reader.close()
+
+    space_pattern = re.compile(r'([\u4e00-\u9fa5])\s+([\u4e00-\u9fa5])')
+
+    for paragraph_index, paragraph in enumerate(data):
+        text = paragraph['text']
+        spo_list = paragraph['spo_list']
+
+        if re.match(space_pattern, text):
+            print(re.match(space_pattern, text))
+
+        for spo_index, spo in enumerate(spo_list):
+            subject = spo['subject']
+            object_ = spo['object']
+
+            new_subject = ''
+            spo_list[spo_index]['subject'] = new_subject
+
+            new_object = ''
+            spo_list[spo_index]['object'] = new_object
+        data[paragraph_index]['spo_list'] = spo_list
+
+
+def test_word_piece_tokenizer():
+
+    text = '052360'
+    entity = '52360'
+
+    tokenizer = FullTokenizer(vocab_file='../bert-base-chinese/vocab.txt')
+
+    text_tokens = tokenizer.tokenize(text)
+    entity_tokens = tokenizer.tokenize(entity)
+
+    print(text_tokens)
+    print(entity_tokens)
+
+
 if __name__ == '__main__':
+    test_word_piece_tokenizer()
     pass
