@@ -1,6 +1,7 @@
 # -*- coding: utf - 8 -*-
 
 import re
+import sys
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -9,6 +10,31 @@ from utils.tokenization import FullTokenizer
 
 
 def convert_raw_data_to_json_format(file_path, save_path):
+    """将原始数据转成 JSON 格式
+
+    转换后的文件格式:
+        [
+            {
+                "text": "......",
+
+                "spo_list": [
+                    {
+                        "subject": "...",
+                        "subject_type": "...",
+                        "object": "...",
+                        "object_type": "...",
+                        "predicate": "..."
+                    }
+                ]
+            }
+        ]
+
+    Args:
+        file_path: 原始数据文件路径
+        save_path: JSON 格式文件存储路径
+
+    Returns: None
+    """
     with open(file_path, mode='r', encoding='utf-8') as reader:
         lines = reader.readlines()
     reader.close()
@@ -30,6 +56,14 @@ def convert_raw_data_to_json_format(file_path, save_path):
 
 
 def count_text_length(file_path):
+    """统计 text 字段在 word piece 分词后的长度
+
+    Args:
+        file_path: 数据文件路径
+
+    Returns: None
+
+    """
     with open(file_path, mode='r', encoding='utf-8') as reader:
         data = json.load(reader)
     reader.close()
@@ -49,6 +83,27 @@ def count_text_length(file_path):
 
 
 def show_schemas_info(file_path):
+    """展示 schema 的相关统计信息, 具体包括:
+        1. (subject type, object type) -> predicate 对应关系
+        2. subject type 集合
+        3. object type 集合
+        4. predicate 集合
+        5. subject type 和 object type 的并集
+        6. subject type 和 object type 的交集
+
+    Args:
+        file_path: schemas 的路径
+
+    Results:
+        1. 一共存在 49 个不同的 predicate
+        2. 一共存在 16 个不同的 subject type
+        3. 一共存在 16 个不同的 object type
+        4. subject type 和 object type 的并集中有 28 个元素
+        5. subject type 和 object type 的交集中有 4 个元素
+        6. (subject type, object type) -> [predicate] 对应关系共 36组
+           其中每组对应的 predicate 的数量分别为:
+           (2, 4, 1, 1, 2, 1, 1, 1, 1, 1, 4, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 3, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+    """
     schemas_dict = dict()
     subject_type_set = set()
     object_type_set = set()
@@ -84,6 +139,16 @@ def show_schemas_info(file_path):
 
 
 def load_schemas(file_path):
+    """加载 schemas
+
+    Args:
+        file_path: schemas 文件路径
+
+    Returns:
+        subject_type_list: list of subject type
+        object_type_list: list of object type
+        predicate_list: list of predicate
+    """
     subject_type_list = []
     object_type_list = []
     predicate_list = []
@@ -102,6 +167,14 @@ def load_schemas(file_path):
 
 
 def check_train_data(file_path):
+    """
+
+    Args:
+        file_path:
+
+    Returns:
+
+    """
     with open(file_path, mode='r', encoding='utf-8') as reader:
         data = json.load(reader)
     reader.close()
@@ -209,20 +282,6 @@ def remove_whitespace(file_path):
         data[paragraph_index]['spo_list'] = spo_list
 
 
-def test_word_piece_tokenizer():
-
-    text = '052360'
-    entity = '52360'
-
-    tokenizer = FullTokenizer(vocab_file='../bert-base-chinese/vocab.txt')
-
-    text_tokens = tokenizer.tokenize(text)
-    entity_tokens = tokenizer.tokenize(entity)
-
-    print(text_tokens)
-    print(entity_tokens)
-
-
 if __name__ == '__main__':
-    test_word_piece_tokenizer()
+    load_schemas('../duie-dataset/schemas')
     pass
