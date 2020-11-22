@@ -291,36 +291,57 @@ def check_entity_overlap(file_path):
     """检查实体重叠情况, 具体包括:
         1. 统计出现相同实体的 context 条目
         2. 统计出现实体重叠的 context 条目(不包含相同实体的条目)
+        3. 统计出现 subject 实体相同的 context 条目
+        4. 统计出现 object 实体相同的 context 条目
+        5. 统计出现 subject 实体重叠的 context 条目
+        6. 统计出现 object 实体重叠的 context 条目
 
     Args:
         file_path: 训练集或验证集的文件路径
 
     Results:
         训练集上统计结果:
+            0. total: 173108
             1. common: 92673, 占比 0.25
             2. overlap: 5852, 占比 0.016
+            3. subject common: 87599
+            4. object common: 16909
+            5. subject overlap: 1164
+            6. object overlap: 2413
         验证集上统计结果:
+            0. total: 21639
             1. common: 11627, 占比 0.26
             2. overlap: 697, 占比 0.015
+            3. subject common: 10987
+            4. object common: 2075
+            5. subject overlap: 137
+            6. object overlap: 301
     """
     with open(file_path, mode='r', encoding='utf-8') as reader:
         data = json.load(reader)
     reader.close()
 
-    total_examples = 0
-    total_examples_with_common_entity = 0
-    total_examples_with_overlap_entity = 0
+    total_contexts = 0
+    total_contexts_with_common_entity = 0
+    total_contexts_with_overlap_entity = 0
+    total_contexts_with_common_subject_entity = 0
+    total_contexts_with_common_object_entity = 0
+    total_contexts_with_overlap_subject_entity = 0
+    total_contexts_with_overlap_object_entity = 0
 
     for paragraph in data:
+
+        total_contexts += 1
+
         text: str = paragraph['text']
         spo_list = paragraph['spo_list']
 
         position_tuples = []
+        subject_position_tuples = []
+        object_position_tuples = []
         context_subject_entity_list = []
         context_object_entity_list = []
         for spo in spo_list:
-
-            total_examples += 1
 
             subject = spo['subject']
             object_ = spo['object']
@@ -333,92 +354,153 @@ def check_entity_overlap(file_path):
             if subject_start == -1 or object_start == -1:
                 raise ValueError('cannot find an answer of: ', text, subject, object_)
 
+            subject_position_tuples.append((subject_start, subject_start + len(subject) - 1))
+            object_position_tuples.append((object_start, object_start + len(object_) - 1))
             position_tuples.append((subject_start, subject_start + len(subject) - 1))
             position_tuples.append((object_start, object_start + len(object_) - 1))
 
+        if len(set(context_subject_entity_list)) != len(context_subject_entity_list):
+            total_contexts_with_common_subject_entity += 1
+        if len(set(context_object_entity_list)) != len(context_object_entity_list):
+            total_contexts_with_common_object_entity += 1
         if len(set(context_subject_entity_list)) != len(context_subject_entity_list) or \
                 len(set(context_object_entity_list)) != len(context_object_entity_list):
-            total_examples_with_common_entity += 1
+            total_contexts_with_common_entity += 1
 
+        subject_position_tuples = sorted(list(set(subject_position_tuples)), key=lambda x: x[0])
+        object_position_tuples = sorted(list(set(object_position_tuples)), key=lambda x: x[0])
         position_tuples = sorted(list(set(position_tuples)), key=lambda x: x[0])
+
+        for i in range(len(subject_position_tuples) - 1):
+            if subject_position_tuples[i][1] > subject_position_tuples[i + 1][0]:
+                total_contexts_with_overlap_subject_entity += 1
+                break
+        for i in range(len(object_position_tuples) - 1):
+            if object_position_tuples[i][1] > object_position_tuples[i + 1][0]:
+                total_contexts_with_overlap_object_entity += 1
+                break
         for i in range(len(position_tuples) - 1):
             if position_tuples[i][1] > position_tuples[i + 1][0]:
-                total_examples_with_overlap_entity += 1
+                total_contexts_with_overlap_entity += 1
                 break
 
-    print('total examples: ', total_examples)
-    print('total examples with common entity: ', total_examples_with_common_entity)
-    print('total examples with overlap entity: ', total_examples_with_overlap_entity)
+    print('total contexts: ', total_contexts)
+    print('total contexts with common entity: ', total_contexts_with_common_entity)
+    print('total contexts with overlap entity: ', total_contexts_with_overlap_entity)
+    print('total contexts with common subject entity: ', total_contexts_with_common_subject_entity)
+    print('total contexts with common object entity: ', total_contexts_with_common_object_entity)
+    print('total contexts with overlap subject entity: ', total_contexts_with_overlap_subject_entity)
+    print('total contexts with overlap object entity: ', total_contexts_with_overlap_object_entity)
 
 
 def check_entity_overlap_with_predicate_constraint(file_path):
     """假定已经抽取到 predicate 的前提下, 检查如下 common 和 overlap 的情况:
         1. 给定 predicate 的前提下, subject 是否出现相同, 如果有, 则不能使用预测开始和结束位置的方法
         2. 给定 predicate 的前提下, object 是否出现相同, 如果有, 则不能使用预测开始和结束位置的方法
-        3. 给定 predicate 和 subject 的前提下, object 是否出现相同
-        4. 给定 predicate 和 object 的前提下, subject 是否出现相同
-        5. 给定 predicate 的前提下, subject 是否出现 overlap
-        6. 给定 predicate 的前提下, object 是否出现 overlap
-        7. 给定 predicate 和 subject 的前提下, object 是否出现 overlap
-        8. 给定 predicate 和 object 的前提下, subject 是否出现 overlap
+        3. 给定 predicate 的前提下, subject 是否出现 overlap
+        4. 给定 predicate 的前提下, object 是否出现 overlap
+        5. 给定 predicate 和 subject 的前提下, object 是否出现 overlap
+        6. 给定 predicate 和 object 的前提下, subject 是否出现 overlap
 
     Args:
         file_path: 训练集或验证集文件路径
 
     Results:
         训练集上统计结果:
-
+            1. subject common:
+            2. object common:
+            3. subject overlap: 1048
+            4. object overlap: 0
+            5. object overlap | subject: 0
+            6. subject overlap | object: 1097
+        验证集上统计结果:
+            1. subject common:
+            2. object common:
+            3. subject overlap: 117
+            4. object overlap: 0
+            5. object overlap | subject: 0
+            6. subject overlap | object: 108
     """
     reader = open(file_path, mode='r', encoding='utf-8')
     data = json.load(reader)
     reader.close()
 
     total_examples = 0
-    total_subject_entity_common_examples = 0
-    total_object_entity_common_examples = 0
-    total_subject_object_common_examples = 0
-    total_object_subject_common_examples = 0
+    total_subject_entity_overlap_examples = 0
+    total_object_entity_overlap_examples = 0
+    total_subject_object_entity_overlap_examples = 0
+    total_object_subject_entity_overlap_examples = 0
 
     for paragraph in data:
+
+        text: str = paragraph['text']
         spo_list = paragraph['spo_list']
 
-        predicate_subject_entity = collections.defaultdict(int)
-        predicate_object_entity = collections.defaultdict(int)
-        predicate_subject_object_entity = collections.defaultdict(int)
-        predicate_object_subject_entity = collections.defaultdict(int)
+        predicate_subject_position_tuples = collections.defaultdict(list)
+        predicate_object_position_tuples = collections.defaultdict(list)
+        predicate_subject_object_position_tuples = collections.defaultdict(list)
+        predicate_object_subject_position_tuples = collections.defaultdict(list)
+
         for spo in spo_list:
 
             total_examples += 1
 
             subject = spo['subject']
+            subject_type = spo['subject_type']
             object_ = spo['object']
+            object_type = spo['object']
             predicate = spo['predicate']
 
-            predicate_subject_entity[predicate + subject] += 1
-            predicate_object_entity[predicate + object_] += 1
-            predicate_subject_object_entity[predicate + subject + object_] += 1
-            predicate_object_subject_entity[predicate + object_ + subject] += 1
+            subject_start = text.lower().find(subject.lower())
+            object_start = text.lower().find(object_.lower())
+            if subject_start == -1 or object_start == -1:
+                raise ValueError('cannot find an answer of: ', text, subject, object_)
 
-        for key, value in predicate_subject_entity.items():
-            if value > 1:
-                total_subject_entity_common_examples += 1
+            predicate_subject_position_tuples[predicate + subject_type].append(
+                (subject_start, subject_start + len(subject) - 1)
+            )
+            predicate_object_position_tuples[predicate + object_type].append(
+                (object_start, object_start + len(object_) - 1)
+            )
 
-        for key, value in predicate_object_entity.items():
-            if value > 1:
-                total_object_entity_common_examples += 1
+            predicate_subject_object_position_tuples[predicate + subject + object_type].append(
+                (object_start, object_start + len(object_) - 1)
+            )
+            predicate_object_subject_position_tuples[predicate + object_ + subject_type].append(
+                (subject_start, subject_start + len(subject) - 1)
+            )
 
-        for key, value in predicate_subject_object_entity.items():
-            if value > 1:
-                total_subject_object_common_examples += 1
+        # 在 predicate 给定的条件下, subject overlap 的样本数量
+        for key, value in predicate_subject_position_tuples.items():
+            value = sorted(list(set(value)), key=lambda x: x[0])
+            for i in range(len(value) - 1):
+                if value[i][1] > value[i + 1][0]:
+                    total_subject_entity_overlap_examples += 1
+        # 在 predicate 给定的条件下, object overlap 的样本数量
+        for key, value in predicate_object_position_tuples.items():
+            value = sorted(list(set(value)), key=lambda x: x[0])
+            for i in range(len(value) - 1):
+                if value[i][1] > value[i + 1][0]:
+                    total_object_entity_overlap_examples += 1
 
-        for key, value in predicate_object_subject_entity.items():
-            if value > 1:
-                total_object_subject_common_examples += 1
+        # 在已知 predicate 和 subject 的前提下, object overlap 的样本数量
+        for key, value in predicate_subject_object_position_tuples.items():
+            value = sorted(list(set(value)), key=lambda x: x[0])
+            for i in range(len(value) - 1):
+                if value[i][1] > value[i + 1][0]:
+                    total_subject_object_entity_overlap_examples += 1
+        # 在已知 predicate 和 object 的前提下, subject overlap 的样本数量
+        for key, value in predicate_object_subject_position_tuples.items():
+            value = sorted(list(set(value)), key=lambda x: x[0])
+            for i in range(len(value) - 1):
+                if value[i][1] > value[i + 1][0]:
+                    total_object_subject_entity_overlap_examples += 1
 
-    print('total subject entity common examples: ', total_subject_entity_common_examples)
-    print('total object entity common examples: ', total_object_entity_common_examples)
-    print('total subject object overlap examples: ', total_subject_object_common_examples)
-    print('total object subject overlap examples: ', total_object_subject_common_examples)
+    print('total examples: ', total_examples)
+    print('total subject entity overlap examples: ', total_subject_entity_overlap_examples)
+    print('total object entity overlap examples: ', total_object_entity_overlap_examples)
+    print('total subject object entity overlap examples: ', total_subject_object_entity_overlap_examples)
+    print('total object subject entity overlap examples: ', total_object_subject_entity_overlap_examples)
 
 
 def remove_whitespace(file_path):
