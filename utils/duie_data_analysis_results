@@ -1,0 +1,53 @@
+DuIE Dataset 数据集统计结果:
+
+1. 对于一条 context 中的所有实体, 统计出实体完全相同情况和重叠情况
+
+    训练集:
+        出现 subject 完全相同的 context 一共有 87599 条
+        出现 object 完全相同的 context 一共有 16909 条
+        同时出现 subject 完全相同和 object 完全相同的 context 一共 11835 条
+        出现 subject 完全相同或出现 object 完全相同的 context 一共 92673 条
+        Notice: 重叠已将完全相同排除在外
+        出现 subject 重叠的 context 一共有 1164 条
+        出现 object 重叠的 context 一共有 2413 条
+        同时出现 subject 重叠和 object 重叠的 context 一共有 5 条
+        出现 subject 重叠或出现 object 重叠的 context 一共有 3572 条
+
+    验证集:
+        出现 subject 完全相同的 context 一共有 10987 条
+        出现 object 完全相同的 context 一共有 2075 条
+        同时出现 subject 完全相同和 object 完全相同的 context 一共 1435 条
+        出现 subject 完全相同或出现 object 完全相同的 context 一共 11627 条
+        Notice: 重叠已将完全相同排除在外
+        出现 subject 重叠的 context 一共有 137 条
+        出现 object 重叠的 context 一共有 301 条
+        同时出现 subject 重叠和 object 重叠的 context 一共有 0 条
+        出现 subject 重叠或出现 object 重叠的 context 一共有 438 条
+
+2. 根据 1 的统计结果可以得出, 数据集中存在大量的实体完全相同或重叠的情况现统计出在一条 context 中, 如果实体相同, 他们的实体类型是否一致:
+
+    训练集:
+        出现 subject 对应多个实体类型的 context 一共 28467
+        出现 object 对应多个实体类型的 context 一共 887
+    验证集:
+        出现 subject 对应多个实体类型的 context 一共 3711 条
+        出现 object 对应多个实体类型的 context 一共 108 条
+
+3. 现在考虑先预测出 predicate, 统计在 predicate 给定的情况下, subject 和 object 的 完全相同和重叠 情况:
+
+    训练集:
+        total examples: 364215
+        在给定 predicate 的前提下, subject 出现重叠的样本数为 1048
+        在给定 predicate 的前提下, object 出现重叠的样本数为 0
+        在给定 predicate 和 subject 的前提下, object 出现重叠的样本数为 0
+        在给定 predicate 和 object 的前提下, subject 出现重叠的样本数为 1097
+    验证集:
+        total examples: 45577
+        在给定 predicate 的前提下, subject 出现重叠的样本数为 117
+        在给定 predicate 的前提下, object 出现重叠的样本数为 0
+        在给定 predicate 和 subject 的前提下, object 出现重叠的样本数为 0
+        在给定 predicate 和 object 的前提下, subject 出现重叠的样本数为 108
+
+    从统计结果中可以看出, 先使用分类模型提取出句子中所有的关系
+    然后使用标注模型确定 object entity
+    最后使用标注模型确定 subject entity 是一种比较合理的方案
