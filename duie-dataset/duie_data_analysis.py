@@ -713,5 +713,5 @@ def count_text_length(file_path):
 
 
 if __name__ == '__main__':
-    show_schemas_info('../duie-dataset/schemas')
+    show_schemas_info('schemas')
     pass
