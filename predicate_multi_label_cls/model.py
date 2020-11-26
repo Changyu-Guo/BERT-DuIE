@@ -177,14 +177,14 @@ def train(kwargs):
             )
         ]
 
-        # model.fit(
-        #     train_dataset,
-        #     epochs=kwargs['epochs'],
-        #     steps_per_epoch=1,
-        #     callbacks=callbacks,
-        #     verbose=1,
-        #     validation_data=dev_dataset
-        # )
+        model.fit(
+            train_dataset,
+            epochs=kwargs['epochs'],
+            steps_per_epoch=steps_per_epoch,
+            callbacks=callbacks,
+            verbose=1,
+            validation_data=dev_dataset
+        )
 
         model.save_weights(kwargs['model_save_path'], save_format='h5')
 
