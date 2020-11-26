@@ -713,5 +713,5 @@ def count_text_length(file_path):
 
 
 if __name__ == '__main__':
-    count_text_length('../duie-dataset/train_data_formatted.json')
+    show_schemas_info('../duie-dataset/schemas')
     pass
